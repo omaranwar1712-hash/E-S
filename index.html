@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title> Electronics  Store </title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        :root {
+            --primary: #3b82f6; --bg-dark: #0f172a; --card-bg: #1e293b;
+            --text-light: #f8fafc; --accent: #10b981; --error: #ef4444;
+        }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: var(--bg-dark); color: var(--text-light); margin: 0; padding-bottom: 50px; }
+
+        /* Header & Search */
+        header { 
+            background: rgba(15, 23, 42, 0.9); padding: 1rem 5%; 
+            display: flex; justify-content: space-between; align-items: center; 
+            position: sticky; top: 0; z-index: 1000; border-bottom: 1px solid #334155; backdrop-filter: blur(10px);
+        }
+        .search-bar {
+            background: #1e293b; border: 1px solid #334155; padding: 10px 20px;
+            border-radius: 25px; color: white; width: 40%; outline: none; transition: 0.3s;
+        }
+        .search-bar:focus { border-color: var(--primary); box-shadow: 0 0 10px rgba(59, 130, 246, 0.3); }
+
+        /* Filters */
+        .filter-container { display: flex; justify-content: center; gap: 10px; padding: 20px; flex-wrap: wrap; background: #111827; }
+        .filter-btn {
+            background: transparent; border: 1px solid var(--primary); color: var(--primary);
+            padding: 8px 25px; border-radius: 20px; cursor: pointer; transition: 0.3s; font-weight: bold;
+        }
+        .filter-btn.active, .filter-btn:hover { background: var(--primary); color: white; }
+
+        /* Product Grid */
+        .product-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 25px; padding: 30px 5%; }
+        .product-card {
+            background: var(--card-bg); border-radius: 15px; padding: 20px;
+            text-align: center; border: 1px solid #334155; transition: 0.3s; position: relative;
+        }
+        .product-card:hover { border-color: var(--primary); transform: translateY(-5px); }
+        .product-card img { width: 100%; height: 180px; object-fit: contain; margin-bottom: 15px; }
+        .price { color: var(--accent); font-size: 1.3rem; font-weight: bold; margin: 10px 0; }
+
+        /* Quantity Controls Outside */
+        .qty-input-container { display: flex; justify-content: center; align-items: center; gap: 10px; margin-bottom: 15px; }
+        .qty-btn { background: #334155; border: none; color: white; width: 30px; height: 30px; border-radius: 5px; cursor: pointer; }
+        .qty-num { width: 40px; text-align: center; background: none; border: 1px solid #334155; color: white; border-radius: 5px; padding: 5px; }
+
+        button.add-to-cart { background: var(--primary); color: white; border: none; padding: 12px; border-radius: 8px; cursor: pointer; width: 100%; font-weight: bold; }
+
+        /* Cart Modal */
+        #cart-modal {
+            display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            background: var(--card-bg); padding: 30px; border-radius: 20px; z-index: 2000;
+            width: 90%; max-width: 450px; box-shadow: 0 0 50px rgba(0,0,0,0.8); overflow-y: auto; max-height: 90vh;
+        }
+        .input-group { margin-bottom: 15px; }
+        .input-group input, .input-group select {
+            width: 95%; padding: 12px; border-radius: 8px; border: 1px solid #334155; background: #0f172a; color: white;
+        }
+        .discount-badge { background: #10b981; color: white; padding: 5px 10px; border-radius: 5px; font-size: 0.8rem; margin-top: 10px; display: inline-block; }
+
+        .cart-icon { position: relative; cursor: pointer; font-size: 1.6rem; }
+        #cart-count { position: absolute; top: -8px; right: -10px; background: var(--error); color: white; font-size: 0.7rem; padding: 2px 7px; border-radius: 50%; }
+    </style>
+</head>
+<body>
+
+<header>
+    <h2 style="margin:0;">Electronics Store<i class="fas fa-bolt" style="color: #fbbf24;"></i></h2>
+    <input type="text" id="searchInput" class="search-bar" placeholder="Search" onkeyup="filterProducts()">
+    <div class="cart-icon" onclick="toggleCart()">
+        <i class="fas fa-shopping-cart"></i>
+        <span id="cart-count">0</span>
+    </div>
+</header>
+
+<div class="filter-container">
+    <button class="filter-btn active" onclick="setCategory('all', this)">All</button>
+    <button class="filter-btn" onclick="setCategory('Power Banks', this)">Power Banks</button>
+    <button class="filter-btn" onclick="setCategory('Light House', this)">Light House</button>
+    <button class="filter-btn" onclick="setCategory('flashlights', this)">flashlights</button>
+    <button class="filter-btn" onclick="setCategory('Body Care', this)">Body Care</button>
+    <button class="filter-btn" onclick="setCategory('Tools', this)">Tools</button>
+    <button class="filter-btn" onclick="setCategory('VGR Section', this)">VGR Section</button>
+</div>
+
+<div class="product-grid" id="products-container"></div>
+
+<div id="cart-modal">
+    <h3 style="margin-top:0;">إتمام الطلب <span style="float:left; cursor:pointer;" onclick="toggleCart()">×</span></h3>
+    
+    <div id="cart-items-list" style="border-bottom: 1px solid #334155; margin-bottom: 15px; padding-bottom: 10px;"></div>
+
+    <div class="input-group">
+        <input type="text" id="cName" placeholder="الاسم الكامل">
+    </div>
+    <div class="input-group">
+        <input type="tel" id="cPhone" placeholder="رقم الموبايل">
+    </div>
+    <div class="input-group">
+        <input type="text" id="cAddress" placeholder="العنوان بالتفصيل">
+    </div>
+    <div class="input-group">
+        <select id="cCity">
+            <option value="">اختر المحافظة</option>
+            <option value="القاهرة">القاهرة</option>
+            <option value="الجيزة">الجيزة</option>
+            <option value="الإسكندرية">الإسكندرية</option>
+            <option value="أخرى">محافظة أخرى</option>
+        </select>
+    </div>
+
+    <div id="price-summary" style="background: #111827; padding: 15px; border-radius: 10px;">
+        <div style="display:flex; justify-content:space-between;"><span>الإجمالي:</span> <span id="subtotal">0</span> ج.م</div>
+        <div id="discount-area" style="display:none; color: var(--accent); justify-content:space-between; margin-top:5px;">
+            <span>خصم الكمية (10%):</span> <span>-<span id="discount-val">0</span> ج.م</span>
+        </div>
+        <hr>
+        <div style="display:flex; justify-content:space-between; font-weight:bold; font-size:1.2rem;">
+            <span>النهائي:</span> <span id="total-price">0</span> ج.م
+        </div>
+    </div>
+
+    <button onclick="sendToWhatsapp()" style="background:#25d366; width:100%; padding:15px; border:none; color:white; border-radius:10px; margin-top:15px; font-weight:bold; cursor:pointer; font-size:1.1rem;">
+        <i class="fab fa-whatsapp"></i> إرسال الطلب عبر واتساب
+    </button>
+</div>
+
+<script>
+    // 1. قاعدة البيانات (80 منتج نموذج)
+    const allProducts = [
+        { id: 200, name: "White Power Bank(20000)", price: 850, category: "Power Banks", img: "images2/bower.jpg.jpg" },       
+        { id: 201, name: "Black Power Bank(20000)", price: 850, category: "Power Banks", img: "images2/bower2.jpg.jpg" },       
+        { id: 1, name: "اباجورة كريستال", price: 178, category: "Light House", img: "images/1.jpg.jpg" },       
+        { id: 2, name: "اباجورة كريستال", price: 178, category: "Light House", img: "images/2.jpg.jpg" },
+        { id: 3, name: "اباجورة كريستال", price: 178, category: "Light House", img: "images/3.jpg.jpg" },
+        { id: 4, name: "اباجورة كريستال تفاحه", price: 178, category: "Light House", img: "images/4.jpg.jpg" },
+        { id: 5, name: "اباجورة كريستال نجمة مفرغة", price: 178, category: "Light House", img: "images/5.jpg.jpg" },
+        { id: 6, name: "اباجورة كريستال", price: 178, category: "Light House", img: "images/6.jpg.jpg" },
+        { id: 7, name: "اباجورة كريستال نجمة منفوخه", price: 178, category: "Light House", img: "images/7.jpg.jpg" },
+        { id: 8, name: "اباجورة كريستال تاج", price: 178, category: "Light House", img: "images/8.jpg.jpg" },
+        { id: 9, name: "اباجورة قاعدة مكتب", price: 145, category: "Light House", img: "images/9.jpg.jpg" },
+        { id: 10, name: "اباجورة مكتب", price: 352, category: "Light House", img: "images/10.jpg.jpg" },
+        { id: 11, name: "لمبة شحن", price: 68.5, category: "Light House", img: "images/11.jpg.jpg" },
+        { id: 12, name: "لمبة شحن", price: 68.5, category: "Light House", img: "images/12.jpg.jpg" },
+        { id: 13, name: "لمبة شحن", price: 68.5, category: "Light House", img: "images/13.jpg.jpg" },
+        { id: 14, name: "اباجورة مكتب", price: 280, category: "Light House", img: "images/14.jpg.jpg" },
+        { id: 15, name: "اباجورة مكتب", price: 352, category: "Light House", img: "images/15.jpg.jpg" },
+        { id: 16, name: "اباجورة مكتب", price: 170, category: "Light House", img: "images/16.jpg.jpg" },
+        { id: 17, name: "اباجورة مكتب", price: 145, category: "Light House", img: "images/17.jpg.jpg" },
+        { id: 18, name: "اباجورة مكتب", price: 165, category: "Light House", img: "images/18.jpg.jpg" },
+        { id: 19, name: "اباجورة مروحه مكتب", price: 475, category: "Light House", img: "images/19.jpg.jpg" },
+        { id: 20, name: "اباجورة مكتب", price: 235, category: "Light House", img: "images/20.jpg.jpg" },
+        { id: 21, name: "اباجورة وساعه", price: 300, category: "Light House", img: "images/21.jpg.jpg" },
+        { id: 22, name: "اباجورة مكتب", price: 235, category: "Light House", img: "images/22.jpg.jpg" },
+        { id: 23, name: "اباجورة مكتب", price: 235, category: "Light House", img: "images/23.jpg.jpg" },
+        { id: 24, name: "اباجورة وساعه", price: 432, category: "Light House", img: "images/24.jpg.jpg" },
+        { id: 26, name: "شريط ليد بكرة", price: 352, category: "Light House", img: "images/26.jpg.jpg" },
+        { id: 27, name: "اباجورة", price: 345, category: "Light House", img: "images/27.jpg.jpg" },
+        { id: 28, name: "كشاف راس سينسور", price: 145, category: "flashlights", img: "images/28.jpg.jpg" },
+        { id: 29, name: "كشاف راس", price: 92, category: "flashlights", img: "images/29.jpg.jpg" },
+        { id: 30, name: "كشاف حدائق", price: 535, category: "flashlights", img: "images/30.jpg.jpg" },
+        { id: 31, name: "كشاف كلوب", price: 330, category: "flashlights", img: "images/31.jpg.jpg" },
+        { id: 33, name: "مسدس مساج 4*1", price: 535, category: "Body Care", img: "images/33.jpg.jpg" },
+        { id: 34, name: "مسدس مساج 8*1", price: 550, category: "Body Care", img: "images/34.jpg.jpg" },
+        { id: 35, name: "مسدس مساج 9*1", price: 535, category: "Body Care", img: "images/35.jpg.jpg" },
+        { id: 36, name: "مسدس مساج 4*1", price: 300, category: "Body Care", img: "images/36.jpg.jpg" },
+        { id: 37, name: "مسدس مساج 4*1", price: 330, category: "Body Care", img: "images/37.jpg.jpg" },
+        { id: 38, name: "مسدس مساج 4*1", price: 535, category: "Body Care", img: "images/38.jpg.jpg" },
+        { id: 39, name: "مسدس مساج ميني", price: 90, category: "Body Care", img: "images/39.jpg.jpg" },
+        { id: 40, name: "مسدس مساج 5*1", price: 533, category: "Body Care", img: "images/40.jpg.jpg" },
+        { id: 41, name: "جهاز مساج", price: 360, category: "Body Care", img: "images/41.jpg.jpg" },
+        { id: 42, name: "جهاز مساج للركبة", price: 520, category: "Body Care", img: "images/42.jpg.jpg" },
+        { id: 43, name: "جهاز مساج للوجه", price: 432, category: "Body Care", img: "images/43.jpg.jpg" },
+        { id: 44, name: "جهاز مساج للجسم", price: 1390, category: "Body Care", img: "images/44.jpg.jpg" },
+        { id: 46, name: "جهاز مساج للرأس", price: 605, category: "Body Care", img: "images/46.jpg.jpg" },
+        { id: 49, name: "مشط مساج للشعر", price: 925, category: "Body Care", img: "images/49.jpg.jpg" },
+        { id: 58, name: "بلاور لاسلكي", price: 460, category: "Tools", img: "images/58.jpg.jpg" },
+        { id: 59, name: "بلاور سلكي", price: 475, category: "Tools", img: "images/59.jpg.jpg" },
+        { id: 60, name: "حجر ازرق بدون كعب", price: 72.5, category: "Tools", img: "images/60.jpg.jpg" },
+        { id: 61, name: "حجر ليزر بدون كعب", price: 29, category: "Tools", img: "images/61.jpg.jpg" },
+        { id: 62, name: "حجر 26650", price: 99, category: "Tools", img: "images/62.jpg.jpg" },
+        { id: 63, name: "حجر قلم شحن", price: 30, category: "Tools", img: "images/63.jpg.jpg" },
+        { id: 64, name: "شاحن حجر JB-212", price: 250, category: "Tools", img: "images/64.jpg.jpg" },
+        { id: 65, name: "شاحن حجر ليزر", price: 37, category: "Tools", img: "images/65.jpg.jpg" },
+        { id: 66, name: "شاحن حجر JB-118", price: 145, category: "Tools", img: "images/66.jpg.jpg" },
+        { id: 67, name: "شاحن حجر JB-006", price: 170, category: "Tools", img: "images/67.jpg.jpg" },
+        { id: 68, name: "50G ازير", price: 45, category: "Tools", img: "images/68.jpg.jpg" },
+        { id: 69, name: "جوانتي عمال لوكس", price: 28, category: "Tools", img: "images/69.jpg.jpg" },
+        { id: 70, name: "طقم مفك شحن", price: 287, category: "Tools", img: "images/70.jpg.jpg" },
+        { id: 71, name: "ميزان مياة وليزر ومتر", price: 207, category: "Tools", img: "images/71.jpg.jpg" },
+        { id: 72, name: "3M متر", price: 33, category: "Tools", img: "images/72.jpg.jpg" },
+        { id: 73, name: "3M-16mm متر", price: 40, category: "Tools", img: "images/73.jpg.jpg" },
+        { id: 74, name: "افوميتر", price: 153, category: "Tools", img: "images/74.jpg.jpg" },
+        { id: 75, name: "قشارة سلك", price: 95, category: "Tools", img: "images/75.jpg.jpg" },
+        { id: 76, name: "طقم مفك شحن", price: 230, category: "Tools", img: "images/76.jpg.jpg" },
+        { id: 77, name: "طقم عدة 3*1", price: 193, category: "Tools", img: "images/77.jpg.jpg" },
+        { id: 78, name: "طقم مفك 16*1", price: 135, category: "Tools", img: "images/78.jpg.jpg" },
+        { id: 79, name: "طقم عدة 3*1", price: 87, category: "Tools", img: "images/79.jpg.jpg" },
+        { id: 80, name: "طقم مفك 19*1", price: 92, category: "Tools", img: "images/80.jpg.jpg" },
+        { id: 81, name: "طقم مفتاح (13+15+17)", price: 135, category: "Tools", img: "images/81.jpg.jpg" },
+        { id: 82, name: "طقم مفتاح 5 مقاسات", price: 150, category: "Tools", img: "images/82.jpg.jpg" },
+        { id: 83, name: "طقم مفتاح (8+10+12)", price: 87, category: "Tools", img: "images/83.jpg.jpg" },
+        { id: 84, name: "صاعق ناموس 20وات 40سم", price: 722, category: "Tools", img: "images/84.jpg.jpg" },
+        { id: 85, name: "مضرب ناموس", price: 206, category: "Tools", img: "images/85.jpg.jpg" },
+        { id: 86, name: "صاعق ناموس مروحة", price: 110, category: "Tools", img: "images/86.jpg.jpg" },
+        { id: 87, name: "مضرب ناموس 208", price: 206, category: "Tools", img: "images/87.jpg.jpg" },
+        { id: 90, name: "مكنه وبر VGR-818", price: 665, category: "VGR Section", img: "images/90.jpg.jpg" },
+        { id: 92, name: "مكواه VGR-599", price: 955, category: "VGR Section", img: "images/92.jpg.jpg" },
+        { id: 93, name: "مكواه VGR-596", price: 485, category: "VGR Section", img: "images/93.jpg.jpg" },
+        { id: 94, name: "مكواه VGR-581", price: 955, category: "VGR Section", img: "images/94.jpg.jpg" },
+        { id: 95, name: "مكواه VGR-590", price: 1025, category: "VGR Section", img: "images2/95.jpg.jpg" },
+        { id: 96, name: "طقم عدة 5*1", price: 142, category: "Tools", img: "images2/96.jpg.jpg" },
+        { id: 97, name: "طقم مفك 5*1", price: 135, category: "Tools", img: "images2/97.jpg.jpg" },
+        { id: 98, name: "طقم مفك ساعات 6ق", price: 25, category: "Tools", img: "images2/98.jpg.jpg" },
+        { id: 99, name: "طقم مفك gm-211", price: 87, category: "Tools", img: "images2/99.jpg.jpg" },
+        { id: 100, name: "حجر ازرق بكعب", price: 72.5, category: "Tools", img: "images2/100.jpg.jpg" },
+        { id: 101, name: "طقم مفك SW-6011A", price: 57, category: "Tools", img: "images2/101.jpg.jpg" },
+        { id: 102, name: "مكنه لحام اكياس 30سم", price: 548, category: "Tools", img: "images2/102.jpg.jpg" },
+        { id: 103, name: "مكواه لحام لمبة 660", price: 112, category: "Tools", img: "images2/103.jpg.jpg" },
+        { id: 104, name: "مكواه لحام 14*1", price: 193, category: "Tools", img: "images2/104.jpg.jpg" },
+        { id: 105, name: "مكواه لحام", price: 41, category: "Tools", img: "images2/105.jpg.jpg" },
+        { id: 106, name: "مضخة مياه شحن", price: 337, category: "Tools", img: "images2/106.jpg.jpg" },
+        { id: 107, name: "دابل فيس شفاف", price: 35, category: "Tools", img: "images2/107.jpg.jpg" },
+        { id: 110, name: "استيشوارVGR-427", price: 2910, category: "VGR Section", img: "images2/110.jpg.jpg" },
+        { id: 111, name: "فرشة 5*1", price: 3495, category: "VGR Section", img: "images2/111.jpg.jpg" },
+        { id: 112, name: "استيشوار VGR-401", price: 3277, category: "VGR Section", img: "images2/112.jpg.jpg" },
+        { id: 113, name: "استيشوار VGRR-452", price: 1030, category: "VGR Section", img: "images2/113.jpg.jpg" },
+        { id: 115, name: "فرشة 3*1", price: 2805, category: "VGR Section", img: "images2/115.jpg.jpg" },
+        { id: 116, name: "مكواه VGR-522", price: 812, category: "VGR Section", img: "images2/116.jpg.jpg" },
+        { id: 117, name: "مكواه VGR-550", price: 812, category: "VGR Section", img: "images2/117.jpg.jpg" },
+        { id: 118, name: "مكواه VGR-533", price: 812, category: "VGR Section", img: "images2/118.jpg.jpg" },
+        { id: 119, name: "مكواه VGR-558", price: 885, category: "VGR Section", img: "images2/119.jpg.jpg" },
+        { id: 120, name: "مكواه VGR-556", price: 921, category: "VGR Section", img: "images2/120.jpg.jpg" },
+        { id: 121, name: "مكواه VGR-565", price: 465, category: "VGR Section", img: "images2/121.jpg.jpg" },
+        { id: 122, name: "مكنه حيوانات V-225", price: 1140, category: "VGR Section", img: "images2/122.jpg.jpg" },
+        { id: 123, name: "مكواه VGR-515", price: 667, category: "VGR Section", img: "images2/123.jpg.jpg" },
+        { id: 124, name: "مكنة حيوانات V-240", price: 995, category: "VGR Section", img: "images2/124.jpg.jpg" },
+        { id: 125, name: "مكنة حيوانات V-216", price: 1285, category: "VGR Section", img: "images2/125.jpg.jpg" },
+        { id: 126, name: "مكنه حيوانات V-217", price: 4510, category: "VGR Section", img: "images2/126.jpg.jpg" },
+        { id: 127, name: "مكنه حيوانات V-219", price: 1247, category: "VGR Section", img: "images2/127.jpg.jpg" },
+        { id: 128, name: "مكنه حيوانات V-204", price: 1247, category: "VGR Section", img: "images2/128.jpg.jpg" },
+        { id: 129, name: "مكنه حيوانات V-201", price: 1356, category: "VGR Section", img: "images2/129.jpg.jpg" },
+        { id: 130, name: "طقم مكنه V-900+600", price: 1430, category: "VGR Section", img: "images2/130.jpg.jpg" },
+        { id: 131, name: "طقم مكنه V-977+377", price: 3640, category: "VGR Section", img: "images2/131.jpg.jpg" },
+        { id: 132, name: "طقم مكنه(BLACK) V-699+971", price: 1355, category: "VGR Section", img: "images2/132.jpg.jpg" },
+        { id: 133, name: "طقم مكنه(GOLD) V-270+992", price: 4582, category: "VGR Section", img: "images2/133.jpg.jpg" },
+        { id: 134, name: "مكنه V-001_977", price: 5020, category: "VGR Section", img: "images2/134.jpg.jpg" },
+        { id: 135, name: "مكنه V-999", price: 406, category: "VGR Section", img: "images2/135.jpg.jpg" },
+        { id: 136, name: "مكنه V-998", price: 595, category: "VGR Section", img: "images2/136.jpg.jpg" },
+        { id: 137, name: "مكنه V-992", price: 2117, category: "VGR Section", img: "images2/137.jpg.jpg" },
+        { id: 138, name: "مكواه VGR-551", price: 812, category: "VGR Section", img: "images2/138.jpg.jpg" },
+        { id: 139, name: "مكنه تنعيم V-377", price: 1720, category: "VGR Section", img: "images2/139.jpg.jpg" },
+        { id: 140, name: "مكنه تنعيم V-370", price: 705, category: "VGR Section", img: "images2/140.jpg.jpg" },
+        { id: 141, name: "مكنه تنعيم V-366", price: 551, category: "VGR Section", img: "images2/141.jpg.jpg" },
+        { id: 143, name: "مكنه تنعيم V-391", price: 1175, category: "VGR Section", img: "images2/143.jpg.jpg" },
+        { id: 144, name: "مكنه تنعيم V-377 BLUE", price: 1791, category: "VGR Section", img: "images2/144.jpg.jpg" },
+        { id: 145, name: "مكنه انف 4*1", price: 610, category: "VGR Section", img: "images2/145.jpg.jpg" },
+        { id: 146, name: "مكنه تنعيم V-922", price: 580, category: "VGR Section", img: "images2/146.jpg.jpg" },
+        { id: 147, name: "مكنه تنعيم V-398", price: 1392, category: "VGR Section", img: "images2/147.jpg.jpg" },
+        { id: 150, name: "مكنه V-642 ", price: 3277, category: "VGR Section", img: "images2/150.jpg.jpg" },
+        { id: 151, name: "مكنه V-987", price: 667, category: "VGR Section", img: "images2/151.jpg.jpg" },
+        { id: 153, name: "مكنه V-962", price: 638, category: "VGR Section", img: "images2/153.jpg.jpg" },
+        { id: 154, name: "مكنه V-966", price: 537, category: "VGR Section", img: "images2/154.jpg.jpg" },
+        { id: 155, name: "مكنه V-946", price: 2235, category: "VGR Section", img: "images2/155.jpg.jpg" },
+        { id: 156, name: "مكنه V-916", price: 551, category: "VGR Section", img: "images2/156.jpg.jpg" },
+        { id: 157, name: "مكنه V-942", price: 885, category: "VGR Section", img: "images2/157.jpg.jpg" },
+        { id: 158, name: "مكنه V-934", price: 560, category: "VGR Section", img: "images2/158.jpg.jpg" },
+        { id: 159, name: "مكنه V-906", price: 1356, category: "VGR Section", img: "images2/159.jpg.jpg" },
+        { id: 160, name: "مكنه V-901", price: 921, category: "VGR Section", img: "images2/160.jpg.jpg" },
+        { id: 161, name: "مكنه V-886T", price: 1140, category: "VGR Section", img: "images2/161.jpg.jpg" },
+        { id: 162, name: "مكنه V-886C", price: 1900, category: "VGR Section", img: "images2/162.jpg.jpg" },
+        { id: 163, name: "مكنه V-659", price: 921, category: "VGR Section", img: "images2/163.jpg.jpg" },
+        { id: 164, name: "مكنه V-694", price: 3277, category: "VGR Section", img: "images2/164.jpg.jpg" },
+        // ... أضف باقي الـ 80 منتج هنا بنفس النمط
+    ];
+
+    let cart = JSON.parse(localStorage.getItem('myCart')) || [];
+    let currentCategory = 'all';
+
+    // 2. وظيفة عرض المنتجات
+    function displayProducts() {
+        const container = document.getElementById('products-container');
+        const search = document.getElementById('searchInput').value.toLowerCase();
+        
+        const filtered = allProducts.filter(p => {
+            return (currentCategory === 'all' || p.category === currentCategory) && p.name.toLowerCase().includes(search);
+        });
+
+        container.innerHTML = filtered.map(p => `
+            <div class="product-card">
+                <img src="${p.img}" alt="${p.name}">
+                <h4>${p.name}</h4>
+                <p class="price">${p.price.toLocaleString()} ج.م</p>
+                <div class="qty-input-container">
+                    <button class="qty-btn" onclick="changeInputQty(${p.id}, -1)">-</button>
+                    <input type="number" id="qty-in-${p.id}" class="qty-num" value="1" min="1">
+                    <button class="qty-btn" onclick="changeInputQty(${p.id}, 1)">+</button>
+                </div>
+                <button class="add-to-cart" onclick="addToCart(${p.id})">إضافة للسلة</button>
+            </div>
+        `).join('');
+    }
+
+    // 3. إدارة الكمية من الخارج
+    function changeInputQty(id, delta) {
+        const input = document.getElementById(`qty-in-${id}`);
+        let val = parseInt(input.value) + delta;
+        if (val >= 1) input.value = val;
+    }
+
+    function addToCart(id) {
+        const qty = parseInt(document.getElementById(`qty-in-${id}`).value);
+        const product = allProducts.find(p => p.id === id);
+        const existing = cart.find(item => item.id === id);
+
+        if (existing) existing.quantity += qty;
+        else cart.push({ ...product, quantity: qty });
+
+        localStorage.setItem('myCart', JSON.stringify(cart));
+        updateCartUI();
+        document.getElementById(`qty-in-${id}`).value = 1; // ريست العداد
+    }
+
+    // 4. تحديث العربة والحسابات
+    function updateCartUI() {
+        const list = document.getElementById('cart-items-list');
+        let subtotal = 0;
+        let totalQty = 0;
+
+        list.innerHTML = cart.map((item, index) => {
+            subtotal += item.price * item.quantity;
+            totalQty += item.quantity;
+            return `
+                <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
+                    <span>${item.name} (${item.quantity})</span>
+                    <span style="color:var(--error); cursor:pointer;" onclick="removeItem(${index})">حذف</span>
+                </div>
+            `;
+        }).join('');
+
+        let discount = (totalQty > 3) ? subtotal * 0.10 : 0;
+        document.getElementById('discount-area').style.display = (discount > 0) ? 'flex' : 'none';
+        
+        document.getElementById('cart-count').innerText = totalQty;
+        document.getElementById('subtotal').innerText = subtotal.toLocaleString();
+        document.getElementById('discount-val').innerText = discount.toLocaleString();
+        document.getElementById('total-price').innerText = (subtotal - discount).toLocaleString();
+    }
+
+    function removeItem(index) {
+        cart.splice(index, 1);
+        localStorage.setItem('myCart', JSON.stringify(cart));
+        updateCartUI();
+    }
+
+    function setCategory(cat, btn) {
+        currentCategory = cat;
+        document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        displayProducts();
+    }
+
+    function filterProducts() { displayProducts(); }
+    function toggleCart() { 
+        const m = document.getElementById('cart-modal');
+        m.style.display = (m.style.display === 'block') ? 'none' : 'block';
+    }
+
+    // 5. إرسال للواتساب بالبيانات الكاملة
+    function sendToWhatsapp() {
+        const name = document.getElementById('cName').value;
+        const phone = document.getElementById('cPhone').value;
+        const address = document.getElementById('cAddress').value;
+        const city = document.getElementById('cCity').value;
+
+        if (!name || !phone || !address || !city) return alert("يرجى ملء كافة البيانات لضمان التوصيل");
+        if (cart.length === 0) return alert("السلة فارغة!");
+
+        let message = `*طلب جديد من المتجر*%0a`;
+        message += `👤 العميل: ${name}%0a📞 الموبايل: ${phone}%0a📍 العنوان: ${address} - ${city}%0a`;
+        message += `--------------------------%0a🛒 المنتجات:%0a`;
+        
+        cart.forEach(i => message += `• ${i.name} (عدد ${i.quantity})%0a`);
+        
+        const finalPrice = document.getElementById('total-price').innerText;
+        if (cart.reduce((s,i)=>s+i.quantity, 0) > 3) message += `🎁 *تم تطبيق خصم الكمية 10%*%0a`;
+        message += `--------------------------%0a💰 الإجمالي المطلوب: ${finalPrice} ج.م`;
+
+        window.open(`https://wa.me/201208888723?text=${message}`, '_blank'); // استبدل بـ رقمك
+    }
+
+    displayProducts();
+    updateCartUI();
+</script>
+
+</body>
+</html>
